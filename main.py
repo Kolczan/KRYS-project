@@ -1,3 +1,4 @@
+import numpy
 import norx
 
 """
@@ -13,8 +14,8 @@ import norx
 # NORX32, a variant of NORX intended for smaller architectures (32-bit and less). Key and nonce are 128 bits.
 """
 
-F = norx.NORX_F(64)
-norx.runtests()
+norx.runtests(32)
+norx.runtests(64)
 
 print('tests finished')
 
@@ -224,7 +225,7 @@ print('tests finished')
 # def test_G():
 #     # check G function
 #     for ws in [32, 64]:
-#         norx = NORX(w=ws)
+#         abc = norx.NORX_F(32)
 #         x = [1, 0, 0, 0]
 #         for i in range(16):
 #             assert vectors_G(ws, i) == tuple(x)
@@ -235,7 +236,7 @@ print('tests finished')
 # def test_F():
 #     # check F function
 #     for ws in [32, 64]:
-#         norx = NORX(w=ws)
+#         abc = norx.NORX_F(w=ws)
 #         x = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 #         for i in range(16):
 #             assert vectors_F(ws, i) == tuple(x)
@@ -250,7 +251,7 @@ print('tests finished')
 #     k = b''.join([chr(255 & (i*191 + 123)) for i in range(kl)])
 #     n = b''.join([chr(255 & (i*181 + 123)) for i in range(nl)])
 #     for pw in [32, 64]:
-#         norx = NORX(pw, 4, 1, 4*pw)
+#         norx = norx.NORX_F(pw, 4, 1, 4 * pw)
 #         for i in range(len(m)):
 #             c = norx.aead_encrypt(h[:i], m[:i], '', n[:2*pw/8], k[:4*pw/8])
 #             o = norx.aead_decrypt(h[:i], c, '', n[:2*pw/8], k[:4*pw/8])

@@ -20,17 +20,17 @@ class NORX_F(object):
             self.mask = self.dtype(0x7fffffff)
             self.r = numpy.array([8, 11, 16, 31], dtype=self.dtype)
             self.u = numpy.array([
-                [0x243f6a88,           0,          0,  0x85a308d3],
+                [0x416c6120,  0x6d61206b,   0x6f7461,  0],
                 [         0,           0,          0,           0],
-                [0x13198a2e,  0x03707344, 0x254f537a,  0x38531d48],
-                [0x839c6e83,  0xf97a3ae5, 0x8c91d88c,  0x11eafb59]
+                [0,  0, 0,  0],
+                [0,  0, 0,  0]
             ], dtype=self.dtype)
         elif w == 64:
             self.dtype = numpy.uint64
             self.mask = self.dtype(0x7fffffffffffffff)
             self.r = numpy.array([8, 19, 40, 63], dtype=self.dtype)
             self.u = numpy.array([
-                [0x243f6a8885a308d3,                  0,                  0, 0x13198a2e03707344],
+                [0,           0,                  0, 0x13198a2e03707344],
                 [                 0,                  0,                  0,                  0],
                 [0xa4093822299f31d0, 0x082efa98ec4e6c89, 0xae8858dc339325a1, 0x670a134ee52d7fa6],
                 [0xc4316d80cd967541, 0xd21dfbf8b630b762, 0x375a18d261e7f892, 0x343d1f187d92285b]
@@ -151,40 +151,42 @@ class NORX_F(object):
 
 
 def _bitcount(n):
-    """Zwraca liczbę bitów w zbiorze n"""
+    """Zwraca liczbę zmienionych bitów w zbiorze n"""
     count = 0
     while n != 0:
-        count += n & 1
+        count += n & 1  # AND 1 ==> true gdy liczba jest nieparzysta (ma na końcu bit 1)
         n >>= 1
     return count
 
 
 # Zmień liczbę bitów na ufunc, umożliwiając bezpośrednie zastosowanie jej do tablicy numpy
-bitcount = numpy.frompyfunc(_bitcount, 1, 1)
+bitcount = numpy.frompyfunc(_bitcount,1,1)
 
 
-def runtests():
-
-    n = NORX_F(32)
+def runtests(nn):
+    # nn values - 32 or 64
+    n = NORX_F(nn)
     numpy.set_printoptions(formatter={"int": "0x{0:08x}".format})
 
-    nonce = os.urandom(8)
-    key = os.urandom(16)
+    nonce = os.urandom(int(nn/4))
+    key = os.urandom(int(nn/2))
     state = n.new(nonce, key)
 
     print("Utworzono nowy stan:")
     print(state)
     print()
 
+    # Runda funkcji
     permuted = state.copy()
-    n(permuted)
+    n(permuted) ## wchodzi do funkcji __call__
     print("Po rundzie:")
     print(permuted)
     print()
 
+    # Odwracanie permutacji rundy
     unpermuted = permuted.copy()
     n.reverse(unpermuted)
-    print("Odwrócony:")
+    print("Zdeszyfrowany:")
     print(unpermuted)
     assert ((state == unpermuted).all())
     print()
@@ -200,10 +202,11 @@ def runtests():
     print("Średnia dyfuzja rundowa dla funkcji F:")
     print("64:", test_f_diffusion_64())
     print("32:", test_f_diffusion_32())
-
+    print('\n')
 
 def test_g_diffusion_64():
     """Sprawdza, ile rund potrzeba, aby z jednego bitu ustawić >= 31 bitów"""
+
     F = NORX_F(64)
     total = 0
 
