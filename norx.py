@@ -3,8 +3,8 @@ import numpy
 import os
 
 class NORX_F(object):
-    """The NORX round function.
-       Usage:
+    """Funkcja rundowa NORX
+       Użycie:
          f = NORX_F(32)
          state = f.new(nonce, key)
          for i in range(nrounds):
@@ -12,7 +12,7 @@ class NORX_F(object):
     """
 
     def __init__(self, w):
-        """Create a numpy round function.  w must be 32 or 64"""
+        """Utwórz funkcję rundową.  w wartość 32 lub 64"""
         assert (w in (32, 64))
 
         if w == 32:
@@ -20,18 +20,18 @@ class NORX_F(object):
             self.mask = self.dtype(0x7fffffff)
             self.r = numpy.array([8, 11, 16, 31], dtype=self.dtype)
             self.u = numpy.array([
-                [0x243f6a88, 0, 0, 0x85a308d3],
-                [0, 0, 0, 0],
-                [0x13198a2e, 0x03707344, 0x254f537a, 0x38531d48],
-                [0x839c6e83, 0xf97a3ae5, 0x8c91d88c, 0x11eafb59]
+                [0x243f6a88,           0,          0,  0x85a308d3],
+                [         0,           0,          0,           0],
+                [0x13198a2e,  0x03707344, 0x254f537a,  0x38531d48],
+                [0x839c6e83,  0xf97a3ae5, 0x8c91d88c,  0x11eafb59]
             ], dtype=self.dtype)
         elif w == 64:
             self.dtype = numpy.uint64
             self.mask = self.dtype(0x7fffffffffffffff)
             self.r = numpy.array([8, 19, 40, 63], dtype=self.dtype)
             self.u = numpy.array([
-                [0x243f6a8885a308d3, 0, 0, 0x13198a2e03707344],
-                [0, 0, 0, 0],
+                [0x243f6a8885a308d3,                  0,                  0, 0x13198a2e03707344],
+                [                 0,                  0,                  0,                  0],
                 [0xa4093822299f31d0, 0x082efa98ec4e6c89, 0xae8858dc339325a1, 0x670a134ee52d7fa6],
                 [0xc4316d80cd967541, 0xd21dfbf8b630b762, 0x375a18d261e7f892, 0x343d1f187d92285b]
             ], dtype=self.dtype)
@@ -39,13 +39,11 @@ class NORX_F(object):
         self.nbits = self.dtype(w)
 
     def new(self, nonce, key):
-        """Return a new initialized state.
-           nonce: either a bytes object of size w/4 or a
-                  numpy array of shape (2,) of dtype uint32 or
-              uint64 as appropriate.
-           key:   either a bytes object of size w/2 or a
-                  numpy array of shape (4,) of dtype uint32 or
-              uint64 as appropriate."""
+        """Zwróć nowy, zainicjowany stan.
+            nonce: obiekt bajtowy o rozmiarze 4 lub a
+                   numpy tablica kształtu (2,) typu dtype uint32 lub uint64 odpowiednio.
+            klucz: albo obiekt bajtowy o rozmiarze w/2, albo a
+                   numpy tablica kształtu (4,) typu dtype uint32 lub uint64, jeśli to konieczne."""
         state = self.u.copy()
 
         if isinstance(nonce, bytes):
@@ -69,9 +67,9 @@ class NORX_F(object):
         return state
 
     def __call__(self, state):
-        """Perform a single norx round. This applies the G function
-           on the verticals then diagonals.  This modifies the state
-           in-place."""
+        """Wykonaj jedną rundę Norxa. Dotyczy to funkcji G
+            na pionach, a następnie po przekątnych. To modyfikuje stan
+            w miejscu."""
         assert (state.shape == (4, 4))
 
         # Columns
@@ -87,8 +85,7 @@ class NORX_F(object):
             state[index] = s
 
     def reverse(self, state):
-        """Reverse of the F() function - this isn't used by the
-           cipher."""
+        """Odwrotność funkcji F"""
         assert (state.shape == (4, 4))
 
         # Diagonals
@@ -107,7 +104,7 @@ class NORX_F(object):
         return (x ^ y) ^ ((x & y) << self.one)
 
     def reverse_nonlinear(self, z, y):
-        """This should be the reverse of nonlinear()"""
+        """Odwrotność funkcji nieliniowej()"""
         # Recover bit 0 of x
         prevx = (z ^ y) & self.one
         ret = prevx
@@ -119,10 +116,10 @@ class NORX_F(object):
         return ret
 
     def G(self, row):
-        """Apply the G function (based off Cha-Cha) to a row of
-           4 elements.  This is written to hopefully provide
-           maximum clarity - it can be done faster, even in
-           python."""
+        """Zastosuj funkcję G (opartą na Cha-Cha) do rzędu
+            4 elementy. To jest napisane, aby, miejmy nadzieję, zapewnić
+            maksymalna przejrzystość - można to zrobić szybciej, nawet w
+            pyton."""
 
         for i in range(2):
             row[0] = self.nonlinear(row[0], row[1])
@@ -132,8 +129,7 @@ class NORX_F(object):
             row[1] = self.rotr(row[1] ^ row[2], self.r[(i * 2) + 1])
 
     def G_reverse(self, row):
-        """Reverse of the G() function - this isn't used by the
-           cipher."""
+        """Odwrotność funkcji G"""
         for i in range(2):
             row[1] = self.rotl(row[1], self.r[3 - (i * 2)]) ^ row[2]
             row[2] = self.reverse_nonlinear(row[2], row[3])
@@ -142,20 +138,20 @@ class NORX_F(object):
             row[0] = self.reverse_nonlinear(row[0], row[1])
 
     def rotr(self, x, n):
-        """Bitwise right rotate, taking into account the
-           configured word size."""
+        """Bitowy obrót w prawo, biorąc pod uwagę
+            skonfigurowany rozmiar słowa."""
         mask = (self.one << n) - self.one
         return (x >> n) | ((x & mask) << (self.nbits - n))
 
     def rotl(self, x, n):
-        """Bitwise left rotate, taking into account the
-           configured word size."""
+        """Bitowy obrót w lewo, biorąc pod uwagę
+            skonfigurowany rozmiar słowa."""
         mask = (self.one << (self.nbits - n)) - self.one
         return (x >> (self.nbits - n)) | ((x & mask) << n)
 
 
 def _bitcount(n):
-    """Return the number of set bits in n"""
+    """Zwraca liczbę bitów w zbiorze n"""
     count = 0
     while n != 0:
         count += n & 1
@@ -163,13 +159,11 @@ def _bitcount(n):
     return count
 
 
-# Make bitcount a ufunc, allowing it to be applied to a numpy array
-# directly
+# Zmień liczbę bitów na ufunc, umożliwiając bezpośrednie zastosowanie jej do tablicy numpy
 bitcount = numpy.frompyfunc(_bitcount, 1, 1)
 
 
 def runtests():
-    import os
 
     n = NORX_F(32)
     numpy.set_printoptions(formatter={"int": "0x{0:08x}".format})
@@ -178,38 +172,38 @@ def runtests():
     key = os.urandom(16)
     state = n.new(nonce, key)
 
-    print("New State:")
+    print("Utworzono nowy stan:")
     print(state)
     print()
 
     permuted = state.copy()
     n(permuted)
-    print("After Round:")
+    print("Po rundzie:")
     print(permuted)
     print()
 
     unpermuted = permuted.copy()
     n.reverse(unpermuted)
-    print("Reversed:")
+    print("Odwrócony:")
     print(unpermuted)
     assert ((state == unpermuted).all())
     print()
 
-    print("Bits affected:")
+    print("Bity zmienione:")
     print(bitcount(permuted ^ unpermuted))
     print()
 
-    print("Average diffusion rounds for G:")
+    print("Średnia dyfuzja rundowa dla funkcji G:")
     print("64:", test_g_diffusion_64())
     print("32:", test_g_diffusion_32())
 
-    print("Average diffusion rounds for F:")
+    print("Średnia dyfuzja rundowa dla funkcji F:")
     print("64:", test_f_diffusion_64())
     print("32:", test_f_diffusion_32())
 
 
 def test_g_diffusion_64():
-    """Test how many rounds it takes to have >= 31 bits set from a single bit"""
+    """Sprawdza, ile rund potrzeba, aby z jednego bitu ustawić >= 31 bitów"""
     F = NORX_F(64)
     total = 0
 
@@ -230,7 +224,7 @@ def test_g_diffusion_64():
 
 
 def test_g_diffusion_32():
-    """Test how many rounds it takes to have >= 16 bits set from a single bit"""
+    """Sprawdź, ile rund potrzeba, aby z jednego bitu ustawić >= 16 bitów"""
     F = NORX_F(32)
     total = 0
 
@@ -251,7 +245,7 @@ def test_g_diffusion_32():
 
 
 def test_f_diffusion_64():
-    """Test how many rounds it takes to have >= 32 bits set from a single bit in the /c/ area"""
+    """Sprawdź, ile rund potrzeba, aby ustawić >= 32 bity z pojedynczego bitu w obszarze /c/"""
     F = NORX_F(64)
     total = 0
 
@@ -273,7 +267,7 @@ def test_f_diffusion_64():
 
 
 def test_f_diffusion_32():
-    """Test how many rounds it takes to have >= 16 bits set from a single bit in the /c/ area"""
+    """Sprawdź, ile rund potrzeba, aby ustawić >= 16 bitów z pojedynczego bitu w obszarze /c/"""
     F = NORX_F(32)
     total = 0
 
